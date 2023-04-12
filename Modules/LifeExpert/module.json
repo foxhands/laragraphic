@@ -1,0 +1,11 @@
+{
+    "name": "LifeExpert",
+    "alias": "lifeexpert",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\LifeExpert\\Providers\\LifeExpertServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,11 @@
+{
+    "name": "Astro",
+    "alias": "astro",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Astro\\Providers\\AstroServiceProvider"
+    ],
+    "files": []
+}
