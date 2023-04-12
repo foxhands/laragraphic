@@ -12,35 +12,46 @@ class AstroController extends Controller
 {
 
     /**
-     * Метод для расчета гороскопа на основе переданных параметров.
-     * @param string $name Имя человека
-     * @param int $day День рождения
-     * @param int $month Месяц рождения
-     * @param int $year Год рождения
-     * @param int $hour Час рождения
-     * @param int $minute Минута рождения
-     * @param mixed $city Информация о городе (cityId, latitude, longitude)
-     * @param mixed $GMT Часовой пояс в формате GMT
-     * @return array Массив с данными о первичном и вторичном знаке зодиака
-     * @throws GuzzleException
+     * Выполняет вычисление знаков зодиака на основе предоставленной даты и времени.
+     * Этот код отправляет GET-запрос на сайт https://astro-online.ru/view.php с использованием библиотеки Guzzle.
+     * Затем он извлекает cookie-файлы из ответа и записывает их в массив.
+     * После этого, метод вызывает функции 'sendHeader' и 'prepareData', которые возвращают заголовки и данные для отправки POST-запроса соответственно.
+     * Затем метод вызывает функцию 'processResponse' и передает ей параметры для обработки ответа от сервера.
+     * В результате этой операции метод возвращает массив с данными о первичном и вторичном знаке зодиака.
+     * @param string $name Имя человека.
+     * @param int $day День рождения.
+     * @param int $month Месяц рождения.
+     * @param int $year Год рождения.
+     * @param int $hour Час рождения.
+     * @param int $minute Минута рождения.
+     * @return array Массив с первичным и вторичным знаками зодиака в качестве ключей и их номерами в качестве значений или null, если знаков не было найдено.
+     * @throws GuzzleException Если произошла ошибка при отправке HTTP-запроса.
      */
-    public function calculate(string $name, int $day, int $month, int $year, int $hour, int $minute, mixed $city, mixed $GMT): array
+    public function calculate(string $name, int $day, int $month, int $year, int $hour, int $minute, $city, $GMT): array
     {
-    // Создание экземпляра клиента для отправки запроса
+        $cityId = $city['cityId'];
+        $cityN = $city['latitude'];
+        $cityE = $city['longitude'];
         $client = new Client();
-    // URL-адрес сайта для отправки запроса
+
         $url = 'https://astro-online.ru/view.php';
 
-    // Получение cookies из ответа
-        $cookies = $this->getCookies($client, $url);
-    // Получение значения ssid из cookies
-        $ssid = ["ssid" => explode("=", explode(";", $cookies[0])[0])[1]];
+        // Получаем cookie-файлы из ответа
+        $cookies = $this->getCookies($client,$url);
+        // разделение первого элемента массива по символу "="
+        $cookieValue = explode("=", explode(";", $cookies[0])[0]);
+        // Записываем cookie в массив
+        $ssid = ["ssid" => $cookieValue[1]];
 
-    // Отправка POST-запроса и обработка ответа
-        $response = $this->sendRequest($client, $url, $this->prepareData($name, $day, $month, $year, $hour, $minute, $ssid, $city['cityId'], $city['latitude'], $city['longitude'], $GMT), $this->sendHeader($cookies));
+        //Функции которые возвращают заголовки и данные для отправки POST-запроса соответственно.
+        $sendHeader = $this->sendHeader($cookies);
+        $prepareData = $this->prepareData($name, $day, $month, $year, $hour, $minute, $ssid, $cityId, $cityN, $cityE,$GMT);
+
+        //Функции которые отправляют данные и обрабатывают ответ соответственно.
+        $response = $this->sendRequest($client,$url,$prepareData,$sendHeader);
         $rawText = $this->parseResponse($response);
 
-    // Возврат массива с данными о первичном и вторичном знаке зодиака
+        //Возвращает массив с данными о первичном и вторичном знаке зодиака
         return $this->processResponse($rawText);
     }
 

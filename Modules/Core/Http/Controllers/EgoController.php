@@ -21,6 +21,7 @@ class EgoController extends Controller
             $getLevels = $this->getLevels($person);
             return $this->calculateValue($primarySign, $secondarySign, $getLevels);
         });
+
         return $egos->implode('');
     }
 
@@ -130,8 +131,7 @@ class EgoController extends Controller
         return '';
     }
 
-    private function checkCondition4($primary, $secondary, $levels): ?string
-    {
+    private function checkCondition4($primary, $secondary, $levels) {
         $otherZodiacs = array_map(function ($planetData) {
             return $planetData['zodiac'];
         }, $levels['secondaryLevel']);

@@ -20,20 +20,17 @@ class LifeExpertController extends Controller
      * @return array Астрологические данные пользователя.
      * @throws GuzzleException Если запрос к сервису Lifexpert не удался.
      */
-    public function calculate(string $name, int $day, int $month, int $year, int $hour, int $minute, $city): array
+    public function calculate(string $name, int $day, int $month, int $year, int $hour, int $minute): array
     {
         $url = "https://www.lifexpert.ru/jui/rpc/";
-
-        $cityN = $city['latitude'];
-        $cityE = $city['longitude'];
 
         $client = new Client();
 
         $cookies = $this->getCookies($client,$url);
 
-        $headers = $this->getHeaders($cookies, $name, $day, $month, $year, $hour, $minute, $cityN, $cityE);
+        $headers = $this->getHeaders($cookies, $name, $day, $month, $year, $hour, $minute);
 
-        $data = $this->getData($year, $month, $day, $hour, $minute, $name,$cityN, $cityE);
+        $data = $this->getData($year, $month, $day, $hour, $minute, $name);
 
         $response = $this->sendRequest($client, $url, $headers, $data);
 
@@ -65,11 +62,11 @@ class LifeExpertController extends Controller
      * @return array Заголовки запроса.
      * @return array
      */
-    private function getHeaders(array $cookies, string $name, string $day, string $month, string $year, string $hour, string $minute, $cityN, $cityE): array
+    private function getHeaders(array $cookies, string $name, string $day, string $month, string $year, string $hour, string $minute): array
     {
         return [
             'Host' => 'www.lifexpert.ru',
-            'Cookie' => "{$cookies[0]}; astro.control=%7B%22current%22%3A%22{$year}-{$month}-{$day}%20{$hour}%3A{$minute}%3A00%22%2C%22current_coords%22%3A%22%7B%5C%22lat%5C%22%3A$cityN%2C%5C%22lng%5C%22%3A$cityE%2C%5C%22country%5C%22%3A%5C%22RU%5C%22%2C%5C%22verbose%5C%22%3A%5C%22%D0%A6%D0%B5%D0%BD%D1%82%D1%80%D0%B0%D0%BB%D1%8C%D0%BD%D1%8B%D0%B9%20%D1%80-%D0%BD%2C%20%D0%A1%D0%B0%D0%BD%D0%BA%D1%82-%D0%9F%D0%B5%D1%82%D0%B5%D1%80%D0%B1%D1%83%D1%80%D0%B3%5C%22%7D%22%2C%22houses%22%3A%22K%22%7D",
+            'Cookie' => "{$cookies[0]}; astro.control=%7B%22current%22%3A%22{$year}-{$month}-{$day}%20{$hour}%3A{$minute}%3A00%22%2C%22current_coords%22%3A%22%7B%5C%22lat%5C%22%3A59.9503%2C%5C%22lng%5C%22%3A30.3903%2C%5C%22country%5C%22%3A%5C%22RU%5C%22%2C%5C%22verbose%5C%22%3A%5C%22%D0%A6%D0%B5%D0%BD%D1%82%D1%80%D0%B0%D0%BB%D1%8C%D0%BD%D1%8B%D0%B9%20%D1%80-%D0%BD%2C%20%D0%A1%D0%B0%D0%BD%D0%BA%D1%82-%D0%9F%D0%B5%D1%82%D0%B5%D1%80%D0%B1%D1%83%D1%80%D0%B3%5C%22%7D%22%2C%22houses%22%3A%22K%22%7D",
             'Content-Length' => '514',
             'Sec-Ch-Ua' => '"Not A(Brand";v="24", "Chromium";v="110"',
             'Accept' => 'application/json, text/javascript, */*; q=0.01',
@@ -82,7 +79,7 @@ class LifeExpertController extends Controller
             'Sec-Fetch-Site' => 'same-origin',
             'Sec-Fetch-Mode' => 'cors',
             'Sec-Fetch-Dest' => 'empty',
-            'Referer' => "https://www.lifexpert.ru/tools/astropifagor/?current={$year}-{$month}-{$day}:{$hour}:{$minute}:00&current_coords={lat:$cityN,lng:$cityE}&houses=K",
+            'Referer' => "https://www.lifexpert.ru/tools/astropifagor/?current={$year}-{$month}-{$day}:{$hour}:{$minute}:00&current_coords={'test'}&houses=K",
             'Accept-Encoding' => 'gzip, deflate',
             'Accept-Language' => 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
         ];
@@ -99,11 +96,11 @@ class LifeExpertController extends Controller
      * @param string $minute Минута рождения пользователя.
      * @return string Данные запроса.
      */
-    private function getData(string $year, string $month, string $day, string $hour, string $minute, string $name, $cityN, $cityE): string
+    private function getData(string $year, string $month, string $day, string $hour, string $minute, string $name): string
     {
         return '[
             {"jsonrpc":"2.0","id":1,"method":"billing.get_cart","params":{}},
-            {"jsonrpc":"2.0","id":2,"method":"datetime_calcs.astro_frame","params":{"date":"'.$year.'-'.$month.'-'.$day.' '.$hour.':'.$minute.':00","coord":"{\"lat\":'.$cityN.',\"lng\":'.$cityE.',\"country\":\"RU\",\"verbose\":\"Центральный р-н, Санкт-Петербург\"}","options":{"houses_system":"K","use_aspect_node":false,"use_aspect_lilith":false}}},
+            {"jsonrpc":"2.0","id":2,"method":"datetime_calcs.astro_frame","params":{"date":"'.$year.'-'.$month.'-'.$day.' '.$hour.':'.$minute.':00","coord":{},"options":{"houses_system":"K","use_aspect_node":false,"use_aspect_lilith":false}}},
             {"jsonrpc":"2.0","id":3,"method":"datetime_calcs.destinywill","params":{"date":"'.$year.'-'.$month.'-'.$day.' '.$hour.':'.$minute.':00"}},
             {"jsonrpc":"2.0","id":4,"method":"datetime_calcs.pifagor_frame","params":{"date":"'.$year.'-'.$month.'-'.$day.' '.$hour.':'.$minute.':00","death_date":null,"fio":["", "'.$name.'",""],"use_1999":false}}]';
     }
@@ -143,17 +140,10 @@ class LifeExpertController extends Controller
         $strategies = $obj[1]->result->elements->strategy;
         $planets = $obj[1]->result->planets;
 
-        $processedPlanets = [];
-        foreach ($planets as $key => $planet) {
-            $processedPlanets[$key] = array_slice($planet, 1, 2);
-        }
-
         return [
             'elements' => $elements,
             'strategies' => $strategies,
-            'planets' => $processedPlanets
+            'planets' => $planets
         ];
     }
-
-
 }

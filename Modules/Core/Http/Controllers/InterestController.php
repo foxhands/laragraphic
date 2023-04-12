@@ -9,7 +9,7 @@ use Illuminate\Routing\Controller;
 class InterestController extends Controller
 {
     /**
-     * Получает название уровня мужчины из массива данных.
+     * Получает название уровня из массива данных.
      *
      * @param array $data Массив данных.
      *
@@ -20,225 +20,113 @@ class InterestController extends Controller
         $egos = collect($data)->map(function ($person) {
             $primarySign = $person['zodiac']['primary'];
             $secondarySign = $person['zodiac']['secondary'];
-            $getLevels = $this->getLevels($person);
-            return $this->calculateValue($primarySign, $secondarySign, $getLevels);
+            $mainLevel = $this->getMainLevel($person);
+            $secondaryLevels = $this->getSecondaryLevels($person);
+            return $this->calculateLevel($primarySign, $secondarySign, $mainLevel, $secondaryLevels);
         });
-
         return $egos->implode('');
     }
 
-    function calculateValue(int $primary, ?int $secondary, array $levels): string
+    /**
+     * Вычисляет уровень эгоцентризма на основе данных о знаке зодиака и статусах его планет.
+     *
+     * @param int $primarySign Данные о первичном знаке зодиака.
+     * @param int|null $secondarySign Данные о вторичном знаке зодиака.
+     * @param array $mainLevel
+     * @param array $secondaryLevels
+     * @return string Название уровня эгоцентризма.
+     */
+    public function calculateLevel(int $primarySign, ?int $secondarySign, array $mainLevel, array $secondaryLevels): string
     {
-        $primaryStatus = $this->hasPrimary($levels, $primary);
-        return $this->getValue($primary, $secondary, $primaryStatus, $levels);
-    }
+        $hasAbodeOrExile = false;
+        $hasPrimaryAbodeOrExile = false;
 
-    private function hasPrimary($levels,$primary){
-        // Ищем первичный знак зодиака на главном уровне
-        if (isset($levels['mainLevel'])) {
-            if ($levels["mainLevel"]["sun"]["zodiac"] == $primary &&
-                ($levels["mainLevel"]["sun"]["status"] == "rise" || $levels["mainLevel"]["sun"]["status"] == "abode")) {
-                return $levels["mainLevel"]["sun"]["status"];
-            }
-        }
-        return null;
-    }
-
-    function getValue($primary, $secondary, $primaryStatus, $levels): string
-    {
-        $getFirstLevelValue = $this->checkCondition1($primary, $secondary, $primaryStatus, $levels);
-        if (!empty($getFirstLevelValue)) {
-            return $getFirstLevelValue;
+        if ($mainLevel && isset($mainLevel['status']) && ($mainLevel['status'] === 'abode' || $mainLevel['status'] === 'exile')) {
+            $hasPrimaryAbodeOrExile = true;
         }
 
-        $getSecondLevelValue = $this->checkCondition2($primary, $secondary, $primaryStatus, $levels);
-        if (!empty($getSecondLevelValue)) {
-            return $getSecondLevelValue;
-        }
-
-        $getSixthLevelValue = $this->checkCondition6($levels, $secondary);
-        if (!empty($getSixthLevelValue)) {
-            return $getSixthLevelValue;
-        }
-
-        $getThirdLevelValue = $this->checkCondition3($primary, $secondary, $primaryStatus, $levels);
-        if (!empty($getThirdLevelValue)) {
-            return $getThirdLevelValue;
-        }
-
-        $getFifthLevelValue = $this->checkCondition5($primary, $secondary, $primaryStatus, $levels);
-        if (!empty($getFifthLevelValue)) {
-            return $getFifthLevelValue;
-        }
-
-        $getFourthLevelValue = $this->checkCondition4($primary, $secondary, $levels);
-        if (!empty($getFourthLevelValue)) {
-            return $getFourthLevelValue;
-        }
-
-        return '';
-    }
-
-
-    private function checkCondition1($primary, $secondary, $primaryStatus, $levels): string
-    {
-        $hasPrimary = $primaryStatus == 'rise' || $primaryStatus == 'abode';
-        $otherZodiacs = array_map(function ($planetData) {
-            return $planetData['zodiac'];
-        }, $levels['secondaryLevel']);
-        $hasSecondary = in_array($secondary, $otherZodiacs) || in_array($primary, $otherZodiacs);
-
-        if ($hasPrimary && !$hasSecondary && count($levels['secondaryLevel']) == 0) {
-            return '4A';
-        } elseif ($hasPrimary && $hasSecondary && count($levels['secondaryLevel']) == 0) {
-            return '3A';
-        } else {
-            return '';
-        }
-    }
-
-    private function checkCondition2($primary, $secondary, $primaryStatus, $levels): string
-    {
-        $hasPrimary = $primaryStatus == 'rise' || $primaryStatus == 'abode';
-        $otherZodiacs = array_map(function ($planetData) {
-            return $planetData['zodiac'];
-        }, $levels['secondaryLevel']);
-        $hasSecondary = in_array($secondary, $otherZodiacs) || in_array($primary, $otherZodiacs);
-
-        if (count($levels['secondaryLevel']) == 1 && $levels['secondaryLevel'][0]['status'] != 'none') {
-            return '5A';
-        } else {
-            return '';
-        }
-    }
-
-    private function checkCondition3($primary, $secondary, $primaryStatus, $levels): string
-    {
-        $hasPrimary = $primaryStatus == 'rise' || $primaryStatus == 'abode';
-        $otherZodiacs = array_map(function ($planetData) {
-            return $planetData['zodiac'];
-        }, $levels['secondaryLevel']);
-        $hasSecondary = in_array($secondary, $otherZodiacs) || in_array($primary, $otherZodiacs);
-
-        if ($hasPrimary && $hasSecondary) {
-            foreach ($levels['secondaryLevel'] as $planetData) {
-                if ($planetData['status'] == 'rise' || $planetData['status'] == 'abode') {
-                    return '4A';
-                }
-            }
-            return '3A';
-        }
-
-        return '';
-    }
-
-    private function checkCondition4($primary, $secondary, $levels): ?string
-    {
-        $otherZodiacs = array_map(function ($planetData) {
-            return $planetData['zodiac'];
-        }, $levels['secondaryLevel']);
-        $hasSecondary = in_array($secondary, $otherZodiacs) || in_array($primary, $otherZodiacs);
-
-        if (!$hasSecondary && count($levels['secondaryLevel']) == 0) {
-            return '2A';
-        } else {
-            return null;
-        }
-    }
-
-    private function checkCondition5($primary, $secondary, $primaryStatus, $levels): string
-    {
-        $otherZodiacs = array_map(function ($planetData) {
-            return $planetData['zodiac'];
-        }, $levels['secondaryLevel']);
-
-        $hasSecondaryAbodeOrRise = false;
-        foreach ($levels['secondaryLevel'] as $planetData) {
-            if (($planetData['status'] == 'rise' || $planetData['status'] == 'abode') && $planetData['zodiac'] == $secondary) {
-                $hasSecondaryAbodeOrRise = true;
+        foreach ($secondaryLevels as $planet => $data) {
+            if (!array_key_exists($planet, ['sun']) && isset($data['status']) && ($data['status'] === 'abode' || $data['status'] === 'exile')) {
+                $hasAbodeOrExile = true;
                 break;
             }
         }
 
-        if ($hasSecondaryAbodeOrRise) {
-            return '1A';
-        } else {
-            return $this->getValueForNoAbodeOrRise($primary, $secondary, $primaryStatus, $levels);
-        }
-    }
-
-    private function checkCondition6($levels, $secondary): string
-    {
-        $abodeOrRiseCount = 0;
-        foreach ($levels as $level) {
-            foreach ($level as $planetData) {
-                if (($planetData['status'] == 'abode' || $planetData['status'] == 'rise') &&
-                    $planetData['zodiac'] == $secondary ) {
-                    $abodeOrRiseCount++;
+        foreach ($secondaryLevels as $item) {
+            if ($secondarySign && isset($item['status']) && ($item['status'] === 'abode' || $item['status'] === 'exile')) {
+                return '1B';
+            } elseif (!$primarySign && !$hasAbodeOrExile && !$hasPrimaryAbodeOrExile) {
+                return '2B';
+            } elseif ($primarySign && ($item['status'] === 'abode' || $item['status'] === 'exile')) {
+                if ($hasAbodeOrExile || $hasPrimaryAbodeOrExile) {
+                    return '3B';
+                } else {
+                    return '4B';
                 }
+            } elseif ($primarySign && (($item['status'] === 'abode' || $item['status'] === 'exile'))) {
+                return '4B';
+            } elseif ($primarySign && $secondarySign && ($item['status'] === 'abode' || $item['status'] === 'exile')) {
+                return '5B';
+            } elseif ($hasAbodeOrExile && count($item) > 1) {
+                return '6B';
             }
         }
-        if ($abodeOrRiseCount >= 2) {
-            return '6A';
-        } else {
-            return '';
-        }
+
+        return 'None';
     }
-
-
-    private function getValueForNoAbodeOrRise($primaryZodiacSign, $secondaryZodiacSigns): string
-    {
-        if (($primaryZodiacSign == "abode" || $primaryZodiacSign == "rise") && empty($secondaryZodiacSigns)) {
-            return "4A";
-        } elseif (!empty($secondaryZodiacSigns)) {
-            return "3A";
-        } else {
-            return "2A";
-        }
-    }
-
-
-
-
-
-
-
 
     /**
-     * Получает данные по уровням вторичных планет мужчины.
+     * Получает знак Зодиака главного
      *
-     * @param array $zodiacData Массив данных мужчины.
+     * @param array $zodiacData Массив данных.
      *
-     * @return array Данные по уровням вторичных планет.
+     * @return array Знак Зодиака.
      */
-    private function getLevels(array $zodiacData): array
+    private function getMainLevel(array $zodiacData): array
     {
         // Получаем данные планет из массива $zodiacData
         $levelSign = $zodiacData['cosmo']['planets'];
 
-        // Создаем массивы для хранения данных по уровням планет
-        $mainLevel = [];
-        $secondaryLevel = [];
+        // Получаем уровень планеты Солнце
+        $levelMain = $levelSign->sun;
 
-        // Получаем данные для каждой планеты, кроме Солнца
+        // Возвращаем массив, содержащий знак зодиака первого
+        return [
+            'zodiac' => $levelMain[1],
+            'status' => $levelMain[2][0] ?? null
+        ];
+    }
+
+    /**
+     * Получает данные по уровням вторичных планет.
+     *
+     * @param array $zodiacData Массив данных.
+     *
+     * @return array Данные по уровням вторичных планет.
+     */
+    private function getSecondaryLevels(array $zodiacData): array
+    {
+        // Получаем данные планет из массива $zodiacData
+        $levelSign = $zodiacData['cosmo']['planets'];
+
+        // Создаем массив для хранения данных по уровням вторичных планет
+        $secondaryLevels = [];
+
+        // Получаем данные для каждой планеты, кроме Солнца, узла Ио и узла Юго-Западного узла
         foreach ($levelSign as $key => $item) {
-            if ($key === 'sun') {
-                $mainLevel[$key] = [
-                    'zodiac' => $item[1],
-                    'status' => !empty($item[2]) ? $item[2][0] : null
-                ];
-            } else{
-                $secondaryLevel[$key] = [
-                    'zodiac' => $item[1],
-                    'status' => !empty($item[2]) ? $item[2][0] : null
-                ];
+            if (in_array($key, ['sun', 'true node', 'south node'], true)) {
+                continue;
             }
+
+            // Получаем знак зодиака и статус планеты
+            $text = !empty($item[2]) ? $item[2][0] : null;
+            $secondaryLevels[$key] = [
+                'zodiac' => $item[1],
+                'status' => $text
+            ];
         }
 
-        // Возвращаем массив данных по уровням планет
-        return [
-            'mainLevel' => $mainLevel,
-            'secondaryLevel' => $secondaryLevel,
-        ];
+        // Возвращаем массив данных по уровням вторичных планет
+        return $secondaryLevels;
     }
 }
